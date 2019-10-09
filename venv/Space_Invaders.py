@@ -32,15 +32,15 @@ def run_game():
     barriers = Group()
 
     # Create the fleet of aliens.
-    gf.create_fleet(ai_settings, screen, ship, aliens)
+    gf.create_fleet(ai_settings, screen, ship, aliens, UFOs)
 
     # Start the main loop for the game.
     while True:
-        gf.check_events(ai_settings, screen, stats, sb, play_button, ship, aliens, bullets, alien_lasers)
+        gf.check_events(ai_settings, screen, stats, sb, play_button, ship, aliens, UFOs, bullets, alien_lasers)
         if stats.game_active:
             ship.update()
             gf.update_bullets(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, alien_lasers)
-            gf.update_aliens(ai_settings, screen, stats, sb, high_scores, ship, aliens, bullets, alien_lasers)
+            gf.update_aliens(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, alien_lasers)
             gf.update_UFOs(ai_settings, screen, UFOs)
             gf.update_music(ai_settings)
             gf.update_animations(ai_settings, screen)

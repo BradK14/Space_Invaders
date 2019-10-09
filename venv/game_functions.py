@@ -26,7 +26,7 @@ def check_keyup_events(event, ship):
     elif event.key == pygame.K_LEFT or event.key == pygame.K_a:
         ship.moving_left = False
 
-def check_events(ai_settings, screen, stats, sb, play_button, ship, aliens, bullets, alien_laser):
+def check_events(ai_settings, screen, stats, sb, play_button, ship, aliens, UFOs, bullets, alien_laser):
     """Respond to keypresses and mouse events."""
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -37,9 +37,9 @@ def check_events(ai_settings, screen, stats, sb, play_button, ship, aliens, bull
             check_keyup_events(event, ship)
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_x, mouse_y = pygame.mouse.get_pos()
-            check_play_button(ai_settings, screen, stats, sb, play_button, ship, aliens, bullets, mouse_x, mouse_y)
+            check_play_button(ai_settings, screen, stats, sb, play_button, ship, aliens, UFOs, bullets, mouse_x, mouse_y)
 
-def check_play_button(ai_settings, screen, stats, sb, play_button, ship, aliens, bullets, mouse_x, mouse_y):
+def check_play_button(ai_settings, screen, stats, sb, play_button, ship, aliens, UFOs, bullets, mouse_x, mouse_y):
     """Start a new game when the player clicks Play."""
     button_clicked = play_button.rect.collidepoint(mouse_x, mouse_y)
     if button_clicked and not stats.game_active:
@@ -65,7 +65,7 @@ def check_play_button(ai_settings, screen, stats, sb, play_button, ship, aliens,
         bullets.empty()
 
         # Create a new fleet and center the ship.
-        create_fleet(ai_settings, screen, ship, aliens)
+        create_fleet(ai_settings, screen, ship, aliens, UFOs)
         ship.center_ship()
 
 def display_high_score(ai_settings, screen, stats, sb, play_button, ship, aliens, bullets, mouse_x, mouse_y):
@@ -150,7 +150,7 @@ def update_bullets(ai_settings, screen, stats, sb, high_scores, ship, aliens, UF
     for alien_laser in alien_lasers.copy():
         if alien_laser.rect.top >= 700:
             alien_lasers.remove(alien_laser)
-    check_laser_ship_collision(ai_settings, screen, stats, sb, high_scores, ship, aliens, bullets, alien_lasers)
+    check_laser_ship_collision(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, alien_lasers)
 
     # Create new alien laser
     alien_fire_laser(ai_settings, screen, aliens, alien_lasers)
@@ -278,13 +278,13 @@ def check_bullet_alien_collisions(ai_settings, screen, stats, sb, ship, aliens, 
         # Increase level.
         stats.level += 1
         sb.prep_level()
-        create_fleet(ai_settings, screen, ship, aliens)
+        create_fleet(ai_settings, screen, ship, aliens, UFOs)
 
-def check_laser_ship_collision(ai_settings, screen, stats, sb, high_scores, ship, aliens, bullets, alien_lasers):
+def check_laser_ship_collision(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, alien_lasers):
     for alien_laser in alien_lasers.copy():
         if alien_laser.rect.colliderect(ship):
             alien_lasers.remove(alien_laser)
-            ship_hit(ai_settings, screen, stats, sb, high_scores, ship, aliens, bullets)
+            ship_hit(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets)
 
 def check_fleet_edges(ai_settings, aliens):
     """Respond appropriately if any aliens have reached an edge."""
@@ -300,7 +300,7 @@ def change_fleet_direction(ai_settings, aliens):
         alien.rect.y += ai_settings.fleet_drop_speed
         alien.rect.x += (ai_settings.alien_speed_factor * ai_settings.fleet_direction)
 
-def ship_hit(ai_settings, screen, stats, sb, high_scores, ship, aliens, bullets):
+def ship_hit(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets):
     """Respond to ship being hit by alien."""
     if stats.ships_left > 0:
 
@@ -340,7 +340,7 @@ def ship_hit(ai_settings, screen, stats, sb, high_scores, ship, aliens, bullets)
     bullets.empty()
 
     # Create a new fleet, and center the ship.
-    create_fleet(ai_settings, screen, ship, aliens)
+    create_fleet(ai_settings, screen, ship, aliens, UFOs)
     ship.center_ship()
 
     # Pause.
@@ -349,17 +349,17 @@ def ship_hit(ai_settings, screen, stats, sb, high_scores, ship, aliens, bullets)
 def display_high_scores(ai_settings, screen, sb, high_scores):
     high_scores.display(sb.rounded_score)
 
-def check_aliens_bottom(ai_settings, screen, stats, sb, high_scores, ship, aliens, bullets):
+def check_aliens_bottom(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets):
     """Check if any aliens have reached the bottom of the screen."""
     screen_rect = screen.get_rect()
     for alien in aliens.sprites():
         if alien.rect.bottom >= screen_rect.bottom:
 
             # Treat this the same as if the ship got hit.
-            ship_hit(ai_settings, screen, stats, sb, high_scores, ship, aliens, bullets)
+            ship_hit(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets)
             break
 
-def update_aliens(ai_settings, screen, stats, sb, high_scores, ship, aliens, bullets, alien_lasers):
+def update_aliens(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, alien_lasers):
     """
     Check if the fleet is at an edge, then update the postions of all aliens in the fleet.
     """
@@ -372,10 +372,10 @@ def update_aliens(ai_settings, screen, stats, sb, high_scores, ship, aliens, bul
 
     # Look for alien-ship collisions.
     if pygame.sprite.spritecollideany(ship, aliens):
-        ship_hit(ai_settings, screen, stats, sb, high_scores, ship, aliens, bullets)
+        ship_hit(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets)
 
     # Look for aliens hitting the bottom of the screen.
-    check_aliens_bottom(ai_settings, screen, stats, sb, high_scores, ship, aliens, bullets)
+    check_aliens_bottom(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets)
 
 def create_alien(ai_settings, screen, aliens, alien_number, row_number, type):
     """Create an alien, and place it in the row."""
@@ -386,14 +386,25 @@ def create_alien(ai_settings, screen, aliens, alien_number, row_number, type):
     alien.rect.y = alien.rect.height + 2 * alien.rect.height * row_number
     aliens.add(alien)
     
-def create_fleet(ai_settings, screen, ship, aliens):
-    """Create a full fleet of aliens."""
-
+def create_fleet(ai_settings, screen, ship, aliens, UFOs):
+    """Create a full fleet of aliens, and reset various features."""
+    # Reset times.
+    curtime = pygame.time.get_ticks()
+    ai_settings.music_old_time = curtime
+    ai_settings.old_time = curtime
+    ai_settings.alien_laser_old_time = curtime
+    ai_settings.UFO_old_time = curtime
     ai_settings.music_speed = ai_settings.music_default_speed
-    number_aliens_x = 11
-    number_rows = 6
+
+    # Delete old UFOs
+    UFOs.empty()
+
+    # Make fleets move direction always start to the right
+    ai_settings.fleet_direction = 1
 
     # Create the fleet of aliens.
+    number_aliens_x = 11
+    number_rows = 6
     for row_number in range(number_rows):
         if row_number < 2:
             for alien_number in range(number_aliens_x):

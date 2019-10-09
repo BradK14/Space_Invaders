@@ -4,6 +4,8 @@ import pygame
 from bullet import Bullet
 from alien_laser import Alien_Laser
 from aliens import Aliens
+from UFO import UFO
+import random
 # from barrier import Barrier
 
 def check_keydown_events(event, ai_settings, screen, ship, bullets, aliens, alien_laser):
@@ -100,7 +102,7 @@ def alien_fire_laser(ai_settings, screen, aliens, alien_lasers):
             alien_lasers.add(new_alien_laser)
             ai_settings.alien_laser_old_time = curtime
 
-def update_screen(ai_settings, screen, stats, sb, ship, aliens, bullets, alien_lasers, play_button):
+def update_screen(ai_settings, screen, stats, sb, ship, aliens, UFOs, bullets, alien_lasers, play_button):
     """Update images on the screen, and flip to the new screen."""
     # Redraw the screen, each pass through the loop.
     screen.fill(ai_settings.bg_color)
@@ -108,12 +110,16 @@ def update_screen(ai_settings, screen, stats, sb, ship, aliens, bullets, alien_l
     # Draw death animations
     for death in ai_settings.death_que:
         screen.blit(death[0], death[1])
+    for ufo_points in ai_settings.UFO_points_display:
+        screen.blit(ufo_points[0], ufo_points[1])
 
     # Redraw all bullets, behind ship and aliens.
     for bullet in bullets.sprites():
         bullet.draw_bullet()
     for alien_laser in alien_lasers.sprites():
         alien_laser.draw_bullet()
+    for ufo in UFOs:
+        ufo.blit_me()
     ship.blitme()
     aliens.draw(screen)
 
@@ -128,7 +134,7 @@ def update_screen(ai_settings, screen, stats, sb, ship, aliens, bullets, alien_l
     pygame.display.flip()
 
 
-def update_bullets(ai_settings, screen, stats, sb, high_scores, ship, aliens, bullets, alien_lasers):
+def update_bullets(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, alien_lasers):
     """Update position of bullets, and get rid of old bullets."""
     # Update bullet positions.
     bullets.update()
@@ -138,7 +144,7 @@ def update_bullets(ai_settings, screen, stats, sb, high_scores, ship, aliens, bu
     for bullet in bullets.copy():
         if bullet.rect.bottom <= 0:
             bullets.remove(bullet)
-    check_bullet_alien_collisions(ai_settings, screen, stats, sb, ship, aliens, bullets)
+    check_bullet_alien_collisions(ai_settings, screen, stats, sb, ship, aliens, UFOs, bullets)
 
     # Get rid of lasers that have disappeared.
     for alien_laser in alien_lasers.copy():
@@ -163,6 +169,7 @@ def update_music(ai_settings):
 def update_animations(ai_settings, screen):
     curtime = pygame.time.get_ticks()
     ai_settings.death_que.clear()
+    ai_settings.UFO_points_display.clear()
     for alien in ai_settings.dying_alien:
         rect = pygame.Rect(alien[0], alien[1], ai_settings.alien_width, ai_settings.alien_height)
         if alien[2] is 1:
@@ -172,7 +179,6 @@ def update_animations(ai_settings, screen):
                 pic = ai_settings.pica1d2
             elif alien[3] is 3:
                 pic = ai_settings.pica1d3
-                ai_settings.dying_alien.remove(alien)
         elif alien[2] is 2:
             if alien[3] is 1:
                 pic = ai_settings.pica2d1
@@ -180,7 +186,6 @@ def update_animations(ai_settings, screen):
                 pic = ai_settings.pica2d2
             elif alien[3] is 3:
                 pic = ai_settings.pica2d3
-                ai_settings.dying_alien.remove(alien)
         else:
             if alien[3] is 1:
                 pic = ai_settings.pica3d1
@@ -195,6 +200,38 @@ def update_animations(ai_settings, screen):
             ai_settings.alien_death_old_time = curtime
             if alien[3] is 4:
                 ai_settings.dying_alien.remove(alien)
+    # UFO death animations
+    font = pygame.font.SysFont(None, 48)
+    for ufo in ai_settings.dying_UFO:
+        rect = pygame.Rect(ufo[0], ufo[1], ai_settings.UFO_width, ai_settings.UFO_height)
+        rect2 = pygame.Rect(int(ufo[0] + (ai_settings.UFO_width / 4)), ufo[1], ai_settings.UFO_width, ai_settings.UFO_height)
+        if ufo[3] is 1:
+            pic = ai_settings.picUFOd1
+        elif ufo[3] is 2:
+            pic = ai_settings.picUFOd2
+        elif ufo[3] is 3:
+            pic = ai_settings.picUFOd3
+        image = pygame.transform.scale(pic, (ai_settings.UFO_width, ai_settings.UFO_height))
+        ai_settings.death_que.append((image, rect))
+        score_str = "{:,}".format(ufo[2])
+        image = font.render(score_str, True, (255, 255, 255), ai_settings.bg_color)
+        ai_settings.UFO_points_display.append((image, rect2))
+        if curtime - ai_settings.alien_death_old_time > ai_settings.alien_death_wait:
+            ufo[3] += 1
+            ai_settings.alien_death_old_time = curtime
+            if ufo[3] is 4:
+                ai_settings.dying_UFO.remove(ufo)
+                
+def update_UFOs(ai_settings, screen, UFOs):
+    curtime = pygame.time.get_ticks()
+    if curtime - ai_settings.UFO_old_time > ai_settings.UFO_wait:
+        UFOs.add(UFO(ai_settings, screen))
+        ai_settings.UFO_old_time = curtime
+        ai_settings.UFO_wait = random.randint(10000, 30000)
+    for ufo in UFOs:
+        ufo.update_pos()
+        if ufo.rect.x > ai_settings.screen_width:
+            UFOs.remove(ufo)
 
 def check_high_score(stats, sb):
     """Check to see if there's a new high score."""
@@ -202,7 +239,7 @@ def check_high_score(stats, sb):
         stats.high_score = stats.score
         sb.prep_high_score()
 
-def check_bullet_alien_collisions(ai_settings, screen, stats, sb, ship, aliens, bullets):
+def check_bullet_alien_collisions(ai_settings, screen, stats, sb, ship, aliens, UFOs, bullets):
     """Respond to bullet-alien collisions."""
     # Remove any bullets and aliens that have collided.
     for alien in aliens:
@@ -217,6 +254,18 @@ def check_bullet_alien_collisions(ai_settings, screen, stats, sb, ship, aliens, 
                 ai_settings.dying_alien.append([alien.rect.x, alien.rect.y, alien.type, 1])
                 sb.prep_score()
                 ai_settings.music_speed *= ai_settings.music_speedup_scale
+
+    # Remove any UFOs that have were hit.
+    for ufo in UFOs:
+        for bullet in bullets:
+            if bullet.rect.colliderect(ufo):
+                stats.score += ai_settings.UFO_points
+                ai_settings.dying_UFO.append([ufo.rect.x, ufo.rect.y, ai_settings.UFO_points, 1])
+                ai_settings.UFO_points = int(random.randint(50, 150) * ai_settings.UFO_score_scale)
+                ai_settings.UFO_score_scale *= 2
+                sb.prep_score()
+                UFOs.remove(ufo)
+
     check_high_score(stats, sb)
     pygame.sprite.groupcollide(bullets, aliens, True, True)
 

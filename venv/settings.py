@@ -1,4 +1,5 @@
 import pygame
+import random
 
 class Settings():
     """A class to store all settings for Alien Invasion."""
@@ -23,6 +24,13 @@ class Settings():
         self.fleet_drop_speed = 30
         self.alien_width = 35
         self.alien_height = 35
+
+        # UFO settings.
+        self.UFO_width = 100
+        self.UFO_height = 35
+        self.UFO_speed = 1
+        self.UFO_old_time = 0
+        self.UFO_wait = random.randint(10000, 30000)
         
         # Alien laser settings.
         self.alien_laser_width = 4
@@ -37,6 +45,7 @@ class Settings():
 
         # How quickly the alien point values increase.
         self.score_scale = 1.5
+        self.UFO_score_scale = 1.5
         self.initialize_dynamic_settings()
 
         # Alien time management
@@ -62,9 +71,14 @@ class Settings():
         self.pica3d1 = pygame.image.load('images/alien3d1.png')
         self.pica3d2 = pygame.image.load('images/alien3d2.png')
         self.pica3d3 = pygame.image.load('images/alien3d3.png')
+        self.picUFOd1 = pygame.image.load('images/UFOd1.png')
+        self.picUFOd2 = pygame.image.load('images/UFOd2.png')
+        self.picUFOd3 = pygame.image.load('images/UFOd3.png')
         
         # Alien death animation
         self.dying_alien = []
+        self.dying_UFO = []
+        self.UFO_points_display = []
         self.death_que = []
         self.alien_death_wait = 40
         self.alien_death_old_time = 0
@@ -80,6 +94,7 @@ class Settings():
         self.alien1_points = 40
         self.alien2_points = 20
         self.alien3_points = 10
+        self.UFO_points = random.randint(50, 150)
 
         # fleet_direction of 1 represents right, -1 represents left.
         self.fleet_direction = 1

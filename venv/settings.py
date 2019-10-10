@@ -31,6 +31,10 @@ class Settings():
         self.UFO_speed = 1
         self.UFO_old_time = 0
         self.UFO_wait = random.randint(10000, 30000)
+
+        # Barrier settings.
+        self.bar_width = 35
+        self.bar_height = 35
         
         # Alien laser settings.
         self.alien_laser_width = 4

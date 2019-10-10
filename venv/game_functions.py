@@ -6,7 +6,7 @@ from alien_laser import Alien_Laser
 from aliens import Aliens
 from UFO import UFO
 import random
-# from barrier import Barrier
+from barrier import Barrier
 
 def check_keydown_events(event, ai_settings, screen, ship, bullets, aliens, alien_laser):
     """Respond to keypresses."""
@@ -26,7 +26,7 @@ def check_keyup_events(event, ship):
     elif event.key == pygame.K_LEFT or event.key == pygame.K_a:
         ship.moving_left = False
 
-def check_events(ai_settings, screen, stats, sb, play_button, ship, aliens, UFOs, bullets, alien_laser):
+def check_events(ai_settings, screen, stats, sb, play_button, ship, aliens, UFOs, bullets, alien_laser, barriers):
     """Respond to keypresses and mouse events."""
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -37,9 +37,9 @@ def check_events(ai_settings, screen, stats, sb, play_button, ship, aliens, UFOs
             check_keyup_events(event, ship)
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_x, mouse_y = pygame.mouse.get_pos()
-            check_play_button(ai_settings, screen, stats, sb, play_button, ship, aliens, UFOs, bullets, mouse_x, mouse_y)
+            check_play_button(ai_settings, screen, stats, sb, play_button, ship, aliens, UFOs, bullets, mouse_x, mouse_y, barriers)
 
-def check_play_button(ai_settings, screen, stats, sb, play_button, ship, aliens, UFOs, bullets, mouse_x, mouse_y):
+def check_play_button(ai_settings, screen, stats, sb, play_button, ship, aliens, UFOs, bullets, mouse_x, mouse_y, barriers):
     """Start a new game when the player clicks Play."""
     button_clicked = play_button.rect.collidepoint(mouse_x, mouse_y)
     if button_clicked and not stats.game_active:
@@ -65,7 +65,7 @@ def check_play_button(ai_settings, screen, stats, sb, play_button, ship, aliens,
         bullets.empty()
 
         # Create a new fleet and center the ship.
-        create_fleet(ai_settings, screen, ship, aliens, UFOs)
+        create_fleet(ai_settings, screen, ship, aliens, UFOs, barriers)
         ship.center_ship()
 
 def display_high_score(ai_settings, screen, stats, sb, play_button, ship, aliens, bullets, mouse_x, mouse_y):
@@ -102,7 +102,7 @@ def alien_fire_laser(ai_settings, screen, aliens, alien_lasers):
             alien_lasers.add(new_alien_laser)
             ai_settings.alien_laser_old_time = curtime
 
-def update_screen(ai_settings, screen, stats, sb, ship, aliens, UFOs, bullets, alien_lasers, play_button):
+def update_screen(ai_settings, screen, stats, sb, ship, aliens, UFOs, bullets, alien_lasers, play_button, barriers):
     """Update images on the screen, and flip to the new screen."""
     # Redraw the screen, each pass through the loop.
     screen.fill(ai_settings.bg_color)
@@ -120,6 +120,8 @@ def update_screen(ai_settings, screen, stats, sb, ship, aliens, UFOs, bullets, a
         alien_laser.draw_bullet()
     for ufo in UFOs:
         ufo.blit_me()
+    for barrier in barriers:
+        barrier.blitme()
     ship.blitme()
     aliens.draw(screen)
 
@@ -134,7 +136,7 @@ def update_screen(ai_settings, screen, stats, sb, ship, aliens, UFOs, bullets, a
     pygame.display.flip()
 
 
-def update_bullets(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, alien_lasers):
+def update_bullets(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, alien_lasers, barriers):
     """Update position of bullets, and get rid of old bullets."""
     # Update bullet positions.
     bullets.update()
@@ -144,13 +146,13 @@ def update_bullets(ai_settings, screen, stats, sb, high_scores, ship, aliens, UF
     for bullet in bullets.copy():
         if bullet.rect.bottom <= 0:
             bullets.remove(bullet)
-    check_bullet_alien_collisions(ai_settings, screen, stats, sb, ship, aliens, UFOs, bullets)
+    check_bullet_alien_collisions(ai_settings, screen, stats, sb, ship, aliens, UFOs, bullets, barriers)
 
     # Get rid of lasers that have disappeared.
     for alien_laser in alien_lasers.copy():
         if alien_laser.rect.top >= 700:
             alien_lasers.remove(alien_laser)
-    check_laser_ship_collision(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, alien_lasers)
+    check_laser_ship_collision(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, alien_lasers, barriers)
 
     # Create new alien laser
     alien_fire_laser(ai_settings, screen, aliens, alien_lasers)
@@ -239,7 +241,7 @@ def check_high_score(stats, sb):
         stats.high_score = stats.score
         sb.prep_high_score()
 
-def check_bullet_alien_collisions(ai_settings, screen, stats, sb, ship, aliens, UFOs, bullets):
+def check_bullet_alien_collisions(ai_settings, screen, stats, sb, ship, aliens, UFOs, bullets, barriers):
     """Respond to bullet-alien collisions."""
     # Remove any bullets and aliens that have collided.
     for alien in aliens:
@@ -269,6 +271,13 @@ def check_bullet_alien_collisions(ai_settings, screen, stats, sb, ship, aliens, 
     check_high_score(stats, sb)
     pygame.sprite.groupcollide(bullets, aliens, True, True)
 
+    # Check if a barrier was hit
+    for barrier in barriers:
+        for bullet in bullets:
+            if bullet.rect.colliderect(barrier):
+                barrier.damage_barrier(barriers)
+                bullets.remove(bullet)
+
     if len(aliens) == 0:
 
         # If the entire fleet is destroyed, start a new level.
@@ -278,13 +287,20 @@ def check_bullet_alien_collisions(ai_settings, screen, stats, sb, ship, aliens, 
         # Increase level.
         stats.level += 1
         sb.prep_level()
-        create_fleet(ai_settings, screen, ship, aliens, UFOs)
+        create_fleet(ai_settings, screen, ship, aliens, UFOs, barriers)
 
-def check_laser_ship_collision(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, alien_lasers):
+def check_laser_ship_collision(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, alien_lasers, barriers):
     for alien_laser in alien_lasers.copy():
         if alien_laser.rect.colliderect(ship):
             alien_lasers.remove(alien_laser)
-            ship_hit(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets)
+            ship_hit(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, barriers)
+
+    # Check for barrier collision
+    for alien_laser in alien_lasers.copy():
+        for barrier in barriers:
+           if alien_laser.rect.colliderect(barrier):
+                barrier.damage_barrier(barriers)
+                alien_lasers.remove(alien_laser)
 
 def check_fleet_edges(ai_settings, aliens):
     """Respond appropriately if any aliens have reached an edge."""
@@ -300,7 +316,7 @@ def change_fleet_direction(ai_settings, aliens):
         alien.rect.y += ai_settings.fleet_drop_speed
         alien.rect.x += (ai_settings.alien_speed_factor * ai_settings.fleet_direction)
 
-def ship_hit(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets):
+def ship_hit(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, barriers):
     """Respond to ship being hit by alien."""
     if stats.ships_left > 0:
 
@@ -340,7 +356,7 @@ def ship_hit(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bu
     bullets.empty()
 
     # Create a new fleet, and center the ship.
-    create_fleet(ai_settings, screen, ship, aliens, UFOs)
+    create_fleet(ai_settings, screen, ship, aliens, UFOs, barriers)
     ship.center_ship()
 
     # Pause.
@@ -349,17 +365,17 @@ def ship_hit(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bu
 def display_high_scores(ai_settings, screen, sb, high_scores):
     high_scores.display(sb.rounded_score)
 
-def check_aliens_bottom(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets):
+def check_aliens_bottom(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, barriers):
     """Check if any aliens have reached the bottom of the screen."""
     screen_rect = screen.get_rect()
     for alien in aliens.sprites():
         if alien.rect.bottom >= screen_rect.bottom:
 
             # Treat this the same as if the ship got hit.
-            ship_hit(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets)
+            ship_hit(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, barriers)
             break
 
-def update_aliens(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, alien_lasers):
+def update_aliens(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, alien_lasers, barriers):
     """
     Check if the fleet is at an edge, then update the postions of all aliens in the fleet.
     """
@@ -370,12 +386,17 @@ def update_aliens(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFO
         aliens.update()
         ai_settings.old_time = curtime
 
+    for barrier in barriers:
+        for alien in aliens:
+            if alien.rect.colliderect(barrier):
+                barriers.remove(barrier)
+
     # Look for alien-ship collisions.
     if pygame.sprite.spritecollideany(ship, aliens):
-        ship_hit(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets)
+        ship_hit(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, barriers)
 
     # Look for aliens hitting the bottom of the screen.
-    check_aliens_bottom(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets)
+    check_aliens_bottom(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, barriers)
 
 def create_alien(ai_settings, screen, aliens, alien_number, row_number, type):
     """Create an alien, and place it in the row."""
@@ -386,7 +407,7 @@ def create_alien(ai_settings, screen, aliens, alien_number, row_number, type):
     alien.rect.y = alien.rect.height + 2 * alien.rect.height * row_number
     aliens.add(alien)
     
-def create_fleet(ai_settings, screen, ship, aliens, UFOs):
+def create_fleet(ai_settings, screen, ship, aliens, UFOs, barriers):
     """Create a full fleet of aliens, and reset various features."""
     # Reset times.
     curtime = pygame.time.get_ticks()
@@ -398,6 +419,9 @@ def create_fleet(ai_settings, screen, ship, aliens, UFOs):
 
     # Delete old UFOs
     UFOs.empty()
+
+    # Delete old Barriers
+    barriers.empty()
 
     # Make fleets move direction always start to the right
     ai_settings.fleet_direction = 1
@@ -415,22 +439,43 @@ def create_fleet(ai_settings, screen, ship, aliens, UFOs):
         elif row_number < 6:
             for alien_number in range(number_aliens_x):
                 create_alien(ai_settings, screen, aliens, alien_number, row_number, 3)
-'''
-def create_barriers():
-    # Delete old barriers
 
-    # Create new barriers
-    for i in range(24):
-        # create barrier
-    for i in range(4):
-        # create barrierBR
-    for i in range(4):
-        #
-    for i in range(4):
-        #
-    for i in range(4):
-        #
-'''
+    # Create new barriers.
+    number_bunkers = 5
+    number_barriers = 11
+    for bunker_num in range(1, number_bunkers):
+        for bar in range(1, number_barriers):
+            create_barrier(ai_settings, screen, bar, bunker_num, barriers)
+
+def create_barrier(ai_settings, screen, bar, bunker_num, barriers):
+    # Find new barrier's position
+    x = 150
+    y = 600
+    for i in range(1, bunker_num):
+        x += 245
+
+    # Create barrier in proper location
+    if bar == 1:
+        barrier = Barrier(ai_settings, screen, x, y, '1')
+    elif bar == 2:
+        barrier = Barrier(ai_settings, screen, x, y - ai_settings.bar_height, '1')
+    elif bar == 3:
+        barrier = Barrier(ai_settings, screen, x, y - (ai_settings.bar_height * 2), 'BR')
+    elif bar == 4:
+        barrier = Barrier(ai_settings, screen, x + ai_settings.bar_width, y - ai_settings.bar_height, 'TL')
+    elif bar == 5:
+        barrier = Barrier(ai_settings, screen, x + ai_settings.bar_width, y - (ai_settings.bar_height * 2), '1')
+    elif bar == 6:
+        barrier = Barrier(ai_settings, screen, x + (ai_settings.bar_width * 2), y - ai_settings.bar_height, 'TR')
+    elif bar == 7:
+        barrier = Barrier(ai_settings, screen, x + (ai_settings.bar_width * 2), y - (ai_settings.bar_height * 2), '1')
+    elif bar == 8:
+        barrier = Barrier(ai_settings, screen, x + (ai_settings.bar_width * 3), y, '1')
+    elif bar == 9:
+        barrier = Barrier(ai_settings, screen, x + (ai_settings.bar_width * 3), y - ai_settings.bar_height, '1')
+    elif bar == 10:
+        barrier = Barrier(ai_settings, screen, x + (ai_settings.bar_width * 3), y - (ai_settings.bar_height * 2), 'BL')
+    barriers.add(barrier)
 
 class Ship_Destroy_Animation:
     def __init__(self, frames, wait = 100, frameindex = 0, step = 1, looponce = True):

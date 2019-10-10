@@ -26,7 +26,7 @@ def check_keyup_events(event, ship):
     elif event.key == pygame.K_LEFT or event.key == pygame.K_a:
         ship.moving_left = False
 
-def check_events(ai_settings, screen, stats, sb, play_button, ship, aliens, UFOs, bullets, alien_laser, barriers):
+def check_events(ai_settings, screen, stats, sb, play_button, high_score_button, ship, aliens, UFOs, bullets, alien_laser, barriers):
     """Respond to keypresses and mouse events."""
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -65,10 +65,10 @@ def check_play_button(ai_settings, screen, stats, sb, play_button, ship, aliens,
         bullets.empty()
 
         # Create a new fleet and center the ship.
-        create_fleet(ai_settings, screen, ship, aliens, UFOs, barriers)
+        create_fleet(ai_settings, screen, ship, aliens, UFOs, bullets, barriers)
         ship.center_ship()
 
-def display_high_score(ai_settings, screen, stats, sb, play_button, ship, aliens, bullets, mouse_x, mouse_y):
+def display_high_score(ai_settings, screen, stats, sb, play_button, high_score_button, ship, aliens, bullets, mouse_x, mouse_y):
     """Start a new game when the player clicks Play."""
     button_clicked = play_button.rect.collidepoint(mouse_x, mouse_y)
     if button_clicked and not stats.game_active:
@@ -102,7 +102,7 @@ def alien_fire_laser(ai_settings, screen, aliens, alien_lasers):
             alien_lasers.add(new_alien_laser)
             ai_settings.alien_laser_old_time = curtime
 
-def update_screen(ai_settings, screen, stats, sb, ship, aliens, UFOs, bullets, alien_lasers, play_button, barriers):
+def update_screen(ai_settings, screen, stats, sb, ship, aliens, UFOs, bullets, alien_lasers, play_button, high_score_button, barriers):
     """Update images on the screen, and flip to the new screen."""
     # Redraw the screen, each pass through the loop.
     screen.fill(ai_settings.bg_color)
@@ -130,7 +130,9 @@ def update_screen(ai_settings, screen, stats, sb, ship, aliens, UFOs, bullets, a
 
     # Draw the play button if the game is inactive.
     if not stats.game_active:
+        display_start_up(ai_settings, screen)
         play_button.draw_button()
+        high_score_button.draw_button()
 
     # Make the most recently drawn screen visible.
     pygame.display.flip()
@@ -235,6 +237,75 @@ def update_UFOs(ai_settings, screen, UFOs):
         if ufo.rect.x > ai_settings.screen_width:
             UFOs.remove(ufo)
 
+def display_start_up(ai_settings, screen):
+    # Set up variables for text
+    black = (0, 0, 0)
+    white = (255, 255, 255)
+    green = (0, 255, 0)
+    font = pygame.font.SysFont(None, 48)
+    xlfont = pygame.font.SysFont(None, 200)
+    lfont = pygame.font.SysFont(None, 180)
+    title1 = 'SPACE'
+    title2 = 'INVADERS'
+    score1 = '= 40 PTS'
+    score2 = '= 20 PTS'
+    score3 = '= 10 PTS'
+    score4 = '= ??? PTS'
+
+    # Load images
+    title1_image = xlfont.render(title1, True, white, black)
+    title2_image = lfont.render(title2, True, green, black)
+    score1_image = font.render(score1, True, white, black)
+    score2_image = font.render(score2, True, white, black)
+    score3_image = font.render(score3, True, white, black)
+    score4_image = font.render(score4, True, white, black)
+    alien1_pic = pygame.image.load('images/Alien1a1.png')
+    alien2_pic = pygame.image.load('images/Alien2a1.png')
+    alien3_pic = pygame.image.load('images/Alien3a1.png')
+    ufo_pic = pygame.image.load('images/UFO.png')
+    alien1_image = pygame.transform.scale(alien1_pic, (ai_settings.alien_width, ai_settings.alien_height))
+    alien2_image = pygame.transform.scale(alien2_pic, (ai_settings.alien_width, ai_settings.alien_height))
+    alien3_image = pygame.transform.scale(alien3_pic, (ai_settings.alien_width, ai_settings.alien_height))
+    ufo_image = pygame.transform.scale(ufo_pic, (ai_settings.UFO_width, ai_settings.UFO_height))
+
+    # Prepare rects and their positions
+    x, y = 510, 280
+    title1_rect = title1_image.get_rect()
+    title2_rect = title2_image.get_rect()
+    score1_rect = score1_image.get_rect()
+    score2_rect = score2_image.get_rect()
+    score3_rect = score3_image.get_rect()
+    score4_rect = score4_image.get_rect()
+    title1_rect.x = 380
+    title1_rect.y = 10
+    title2_rect.x = 300
+    title2_rect.y = 120
+    score1_rect.x = x + 10 + ai_settings.alien_width
+    score1_rect.y = y
+    score2_rect.x = x + 10 + ai_settings.alien_width
+    score2_rect.y = y + 20 + ai_settings.alien_height
+    score3_rect.x = x + 10 + ai_settings.alien_width
+    score3_rect.y = y + ((20 + ai_settings.alien_height) * 2)
+    score4_rect.x = (x + 10 + ai_settings.UFO_width) - 40
+    score4_rect.y = y + ((20 + ai_settings.alien_height) * 3)
+    alien1_rect = pygame.Rect(x, y, ai_settings.alien_width, ai_settings.alien_height)
+    alien2_rect = pygame.Rect(x, y + 20 + ai_settings.alien_height, ai_settings.alien_width, ai_settings.alien_height)
+    alien3_rect = pygame.Rect(x, y + ((20 + ai_settings.alien_height) * 2), ai_settings.alien_width, ai_settings.alien_height)
+    ufo_rect = pygame.Rect(x - 40, y + ((20 + ai_settings.alien_height) * 3), ai_settings.UFO_width, ai_settings.UFO_height)
+
+    # Blit everything to the screen
+    screen.fill(black)
+    screen.blit(title1_image, title1_rect)
+    screen.blit(title2_image, title2_rect)
+    screen.blit(score1_image, score1_rect)
+    screen.blit(score2_image, score2_rect)
+    screen.blit(score3_image, score3_rect)
+    screen.blit(score4_image, score4_rect)
+    screen.blit(alien1_image, alien1_rect)
+    screen.blit(alien2_image, alien2_rect)
+    screen.blit(alien3_image, alien3_rect)
+    screen.blit(ufo_image, ufo_rect)
+
 def check_high_score(stats, sb):
     """Check to see if there's a new high score."""
     if stats.score > stats.high_score:
@@ -287,7 +358,7 @@ def check_bullet_alien_collisions(ai_settings, screen, stats, sb, ship, aliens, 
         # Increase level.
         stats.level += 1
         sb.prep_level()
-        create_fleet(ai_settings, screen, ship, aliens, UFOs, barriers)
+        create_fleet(ai_settings, screen, ship, aliens, UFOs, bullets, barriers)
 
 def check_laser_ship_collision(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, alien_lasers, barriers):
     for alien_laser in alien_lasers.copy():
@@ -351,12 +422,11 @@ def ship_hit(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bu
         i += 1
     ship_death.reset()
 
-    # Empty the list of aliens and bullets.
-    aliens.empty()
-    bullets.empty()
-
     # Create a new fleet, and center the ship.
-    create_fleet(ai_settings, screen, ship, aliens, UFOs, barriers)
+    if stats.game_active:
+        reset_fleet(ai_settings, aliens, UFOs, bullets)
+    else:
+        create_fleet(ai_settings, screen, ship, aliens, UFOs, bullets, barriers)
     ship.center_ship()
 
     # Pause.
@@ -400,14 +470,14 @@ def update_aliens(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFO
 
 def create_alien(ai_settings, screen, aliens, alien_number, row_number, type):
     """Create an alien, and place it in the row."""
-    alien = Aliens(ai_settings, screen, alien_number, type)
+    alien = Aliens(ai_settings, screen, alien_number, row_number, type)
     alien_width = alien.rect.width
     alien.x = 232 + 2 * alien_width * alien_number
     alien.rect.x = alien.x
     alien.rect.y = alien.rect.height + 2 * alien.rect.height * row_number
     aliens.add(alien)
     
-def create_fleet(ai_settings, screen, ship, aliens, UFOs, barriers):
+def create_fleet(ai_settings, screen, ship, aliens, UFOs, bullets, barriers):
     """Create a full fleet of aliens, and reset various features."""
     # Reset times.
     curtime = pygame.time.get_ticks()
@@ -418,9 +488,9 @@ def create_fleet(ai_settings, screen, ship, aliens, UFOs, barriers):
     ai_settings.music_speed = ai_settings.music_default_speed
 
     # Delete old UFOs
+    aliens.empty()
+    bullets.empty()
     UFOs.empty()
-
-    # Delete old Barriers
     barriers.empty()
 
     # Make fleets move direction always start to the right
@@ -446,6 +516,28 @@ def create_fleet(ai_settings, screen, ship, aliens, UFOs, barriers):
     for bunker_num in range(1, number_bunkers):
         for bar in range(1, number_barriers):
             create_barrier(ai_settings, screen, bar, bunker_num, barriers)
+
+def reset_fleet(ai_settings, aliens, UFOs, bullets):
+    # Reset times.
+    curtime = pygame.time.get_ticks()
+    ai_settings.music_old_time = curtime
+    ai_settings.old_time = curtime
+    ai_settings.alien_laser_old_time = curtime
+    ai_settings.UFO_old_time = curtime
+    ai_settings.music_speed = ai_settings.music_default_speed
+
+    # Delete old UFOs
+    bullets.empty()
+    UFOs.empty()
+
+    # Make fleets move direction always start to the right
+    ai_settings.fleet_direction = 1
+
+    # Reposition all remaining aliens
+    for alien in aliens:
+        alien.x = 232 + 2 * alien.rect.width * alien.alien_number
+        alien.rect.x = alien.x
+        alien.rect.y = alien.rect.height + 2 * alien.rect.height * alien.row_number
 
 def create_barrier(ai_settings, screen, bar, bunker_num, barriers):
     # Find new barrier's position

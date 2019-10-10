@@ -3,15 +3,17 @@ from pygame.sprite import Sprite
 
 class Aliens(Sprite):
     """A class to represent a single alien in the fleet."""
-    def __init__(self, ai_settings, screen, alien_number, type):
+    def __init__(self, ai_settings, screen, alien_number, row_number, type):
         """Initialize the alien, and set its starting position."""
         super(Aliens, self).__init__()
-        self.screen = screen
         self.ai_settings = ai_settings
+        self.screen = screen
+        self.alien_number = alien_number
+        self.row_number = row_number
         self.type = type
 
         # Load the alien image, and set its rect attribute.
-        self.rect = pygame.Rect(35, 35, 35, 35)
+        self.rect = pygame.Rect(35, 35, self.ai_settings.alien_width, self.ai_settings.alien_height)
 
         if type is 1:
             self.default_pic = pygame.image.load('images/Alien1a1.png')
@@ -34,9 +36,9 @@ class Aliens(Sprite):
                 self.pic = self.default_pic
             else:
                 self.pic = self.secondary_pic
-        self.image = pygame.transform.scale(self.pic, (35, 35))
-        self.default_image = pygame.transform.scale(self.default_pic, (35, 35))
-        self.secondary_image = pygame.transform.scale(self.secondary_pic, (35, 35))
+        self.image = pygame.transform.scale(self.pic, (self.ai_settings.alien_width, self.ai_settings.alien_height))
+        self.default_image = pygame.transform.scale(self.default_pic, (self.ai_settings.alien_width, self.ai_settings.alien_height))
+        self.secondary_image = pygame.transform.scale(self.secondary_pic, (self.ai_settings.alien_width, self.ai_settings.alien_height))
         if alien_number % 2 is 0:
             self.step = 1
         else:

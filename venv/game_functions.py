@@ -8,6 +8,7 @@ from UFO import UFO
 import random
 from barrier import Barrier
 
+
 def check_keydown_events(event, ai_settings, screen, ship, bullets, aliens, alien_laser):
     """Respond to keypresses."""
     if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
@@ -19,6 +20,7 @@ def check_keydown_events(event, ai_settings, screen, ship, bullets, aliens, alie
     elif event.key == pygame.K_q or event.key == pygame.K_ESCAPE:
         sys.exit()
 
+
 def check_keyup_events(event, ship):
     """Respond to key releases."""
     if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
@@ -26,7 +28,8 @@ def check_keyup_events(event, ship):
     elif event.key == pygame.K_LEFT or event.key == pygame.K_a:
         ship.moving_left = False
 
-def check_events(ai_settings, screen, stats, sb, play_button, high_score_button, ship, aliens, UFOs, bullets, alien_laser, barriers):
+
+def check_events(ai_settings, screen, stats, sb, play_button, high_score_button, done_button, ship, aliens, UFOs, bullets, alien_laser, barriers):
     """Respond to keypresses and mouse events."""
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -37,7 +40,12 @@ def check_events(ai_settings, screen, stats, sb, play_button, high_score_button,
             check_keyup_events(event, ship)
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_x, mouse_y = pygame.mouse.get_pos()
-            check_play_button(ai_settings, screen, stats, sb, play_button, ship, aliens, UFOs, bullets, mouse_x, mouse_y, barriers)
+            if stats.high_score_screen:
+                check_done_button(stats, done_button, mouse_x, mouse_y)
+            else:
+                check_play_button(ai_settings, screen, stats, sb, play_button, ship, aliens, UFOs, bullets, mouse_x, mouse_y, barriers)
+                check_high_score_button(stats, high_score_button, mouse_x, mouse_y)
+
 
 def check_play_button(ai_settings, screen, stats, sb, play_button, ship, aliens, UFOs, bullets, mouse_x, mouse_y, barriers):
     """Start a new game when the player clicks Play."""
@@ -68,21 +76,20 @@ def check_play_button(ai_settings, screen, stats, sb, play_button, ship, aliens,
         create_fleet(ai_settings, screen, ship, aliens, UFOs, bullets, barriers)
         ship.center_ship()
 
-def display_high_score(ai_settings, screen, stats, sb, play_button, high_score_button, ship, aliens, bullets, mouse_x, mouse_y):
-    """Start a new game when the player clicks Play."""
-    button_clicked = play_button.rect.collidepoint(mouse_x, mouse_y)
-    if button_clicked and not stats.game_active:
 
-        # Reset the scoreboard images.
-        '''
-        sb.prep_score()
-        sb.prep_high_score()
-        sb.prep_level()
-        sb.prep_ships()
-        '''
-        # Empty the list of aliens and bullets.
-        aliens.empty()
-        bullets.empty()
+def check_high_score_button(stats, high_score_button, mouse_x, mouse_y):
+    """Go to High Score screen"""
+    button_clicked = high_score_button.rect.collidepoint(mouse_x, mouse_y)
+    if button_clicked and not stats.game_active:
+        stats.high_score_screen = True
+
+
+def check_done_button(stats, done_button, mouse_x, mouse_y):
+    """Return to startup screen."""
+    button_clicked = done_button.rect.collidepoint(mouse_x, mouse_y)
+    if button_clicked and not stats.game_active:
+        stats.high_score_screen = False
+
 
 def fire_bullet(ai_settings, screen, ship, bullets):
     """Fire a bullet, if limit not reached yet."""
@@ -91,7 +98,8 @@ def fire_bullet(ai_settings, screen, ship, bullets):
         new_bullet = Bullet(ai_settings, screen, ship)
         bullets.add(new_bullet)
         pygame.mixer.Sound('sounds/laser.wav').play()
-        
+
+
 def alien_fire_laser(ai_settings, screen, aliens, alien_lasers):
     """Fire a laser, if limit not reached yet."""
     # Create a new laser, add to lasers group.
@@ -102,7 +110,8 @@ def alien_fire_laser(ai_settings, screen, aliens, alien_lasers):
             alien_lasers.add(new_alien_laser)
             ai_settings.alien_laser_old_time = curtime
 
-def update_screen(ai_settings, screen, stats, sb, ship, aliens, UFOs, bullets, alien_lasers, play_button, high_score_button, barriers):
+
+def update_screen(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, alien_lasers, play_button, high_score_button, done_button, barriers):
     """Update images on the screen, and flip to the new screen."""
     # Redraw the screen, each pass through the loop.
     screen.fill(ai_settings.bg_color)
@@ -128,11 +137,22 @@ def update_screen(ai_settings, screen, stats, sb, ship, aliens, UFOs, bullets, a
     # Draw the score information.
     sb.show_score()
 
+    new_high_score = stats.score
     # Draw the play button if the game is inactive.
     if not stats.game_active:
-        display_start_up(ai_settings, screen)
-        play_button.draw_button()
-        high_score_button.draw_button()
+        if stats.high_score_screen:
+            rank = 0
+            for score in high_scores.scores:
+                if stats.score > score:
+                    high_scores.append_score(new_high_score, rank)
+                    stats.reset_stats()
+                rank += 1
+            high_scores.display()
+            done_button.draw_button()
+        else:
+            display_start_up(ai_settings, screen)
+            play_button.draw_button()
+            high_score_button.draw_button()
 
     # Make the most recently drawn screen visible.
     pygame.display.flip()
@@ -159,7 +179,9 @@ def update_bullets(ai_settings, screen, stats, sb, high_scores, ship, aliens, UF
     # Create new alien laser
     alien_fire_laser(ai_settings, screen, aliens, alien_lasers)
 
-def update_music(ai_settings):
+
+def update_music(ai_settings, UFOs):
+    # Background music
     curtime = pygame.time.get_ticks()
     if curtime - ai_settings.music_old_time > ai_settings.music_speed:
         if ai_settings.music_step == 1:
@@ -170,7 +192,15 @@ def update_music(ai_settings):
             ai_settings.music_step = 1
         ai_settings.music_old_time = curtime
 
-def update_animations(ai_settings, screen):
+    # UFO sounds
+    if len(UFOs) > 0 and not pygame.mixer.music.get_busy():
+        pygame.mixer.music.load("sounds/UFO_sound.wav")
+        pygame.mixer.music.play(-1, 0.0)
+    elif len(UFOs) < 1 and pygame.mixer.music.get_busy():
+        pygame.mixer.music.fadeout(1000)
+
+
+def update_animations(ai_settings):
     curtime = pygame.time.get_ticks()
     ai_settings.death_que.clear()
     ai_settings.UFO_points_display.clear()
@@ -204,6 +234,7 @@ def update_animations(ai_settings, screen):
             ai_settings.alien_death_old_time = curtime
             if alien[3] is 4:
                 ai_settings.dying_alien.remove(alien)
+
     # UFO death animations
     font = pygame.font.SysFont(None, 48)
     for ufo in ai_settings.dying_UFO:
@@ -225,7 +256,8 @@ def update_animations(ai_settings, screen):
             ai_settings.alien_death_old_time = curtime
             if ufo[3] is 4:
                 ai_settings.dying_UFO.remove(ufo)
-                
+
+
 def update_UFOs(ai_settings, screen, UFOs):
     curtime = pygame.time.get_ticks()
     if curtime - ai_settings.UFO_old_time > ai_settings.UFO_wait:
@@ -236,6 +268,7 @@ def update_UFOs(ai_settings, screen, UFOs):
         ufo.update_pos()
         if ufo.rect.x > ai_settings.screen_width:
             UFOs.remove(ufo)
+
 
 def display_start_up(ai_settings, screen):
     # Set up variables for text
@@ -306,11 +339,13 @@ def display_start_up(ai_settings, screen):
     screen.blit(alien3_image, alien3_rect)
     screen.blit(ufo_image, ufo_rect)
 
+
 def check_high_score(stats, sb):
     """Check to see if there's a new high score."""
     if stats.score > stats.high_score:
         stats.high_score = stats.score
         sb.prep_high_score()
+
 
 def check_bullet_alien_collisions(ai_settings, screen, stats, sb, ship, aliens, UFOs, bullets, barriers):
     """Respond to bullet-alien collisions."""
@@ -360,6 +395,7 @@ def check_bullet_alien_collisions(ai_settings, screen, stats, sb, ship, aliens, 
         sb.prep_level()
         create_fleet(ai_settings, screen, ship, aliens, UFOs, bullets, barriers)
 
+
 def check_laser_ship_collision(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, alien_lasers, barriers):
     for alien_laser in alien_lasers.copy():
         if alien_laser.rect.colliderect(ship):
@@ -369,9 +405,10 @@ def check_laser_ship_collision(ai_settings, screen, stats, sb, high_scores, ship
     # Check for barrier collision
     for alien_laser in alien_lasers.copy():
         for barrier in barriers:
-           if alien_laser.rect.colliderect(barrier):
+            if alien_laser.rect.colliderect(barrier):
                 barrier.damage_barrier(barriers)
                 alien_lasers.remove(alien_laser)
+
 
 def check_fleet_edges(ai_settings, aliens):
     """Respond appropriately if any aliens have reached an edge."""
@@ -380,6 +417,7 @@ def check_fleet_edges(ai_settings, aliens):
             change_fleet_direction(ai_settings, aliens)
             break
 
+
 def change_fleet_direction(ai_settings, aliens):
     """Drop the entire fleet, and change the fleet's direction."""
     ai_settings.fleet_direction *= -1
@@ -387,8 +425,10 @@ def change_fleet_direction(ai_settings, aliens):
         alien.rect.y += ai_settings.fleet_drop_speed
         alien.rect.x += (ai_settings.alien_speed_factor * ai_settings.fleet_direction)
 
+
 def ship_hit(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, barriers):
     """Respond to ship being hit by alien."""
+    pygame.mixer.Sound('sounds/ship_destruction.wav').play()
     if stats.ships_left > 0:
 
         # Decrement ships_left.
@@ -399,12 +439,12 @@ def ship_hit(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bu
     else:
         stats.game_active = False
         pygame.mouse.set_visible(True)
-        display_high_scores(ai_settings, screen, sb, high_scores)
+        stats.high_score_screen = True
 
     death_position = pygame.Rect(ship.rect.left, ship.rect.top, ship.rect.width, ship.rect.height)
     death_frames = [death_position, death_position, death_position, death_position, death_position, death_position, death_position]
-    death_frames_pics = [pygame.image.load('images/Shipd1.png'), pygame.image.load('images/Shipd2.png'), pygame.image.load('images/Shipd3.png'),\
-                    pygame.image.load('images/Shipd4.png'), pygame.image.load('images/Shipd5.png'), pygame.image.load('images/Shipd6.png'), pygame.image.load('images/Shipd7.png')]
+    death_frames_pics = [pygame.image.load('images/Shipd1.png'), pygame.image.load('images/Shipd2.png'), pygame.image.load('images/Shipd3.png'),
+                         pygame.image.load('images/Shipd4.png'), pygame.image.load('images/Shipd5.png'), pygame.image.load('images/Shipd6.png'), pygame.image.load('images/Shipd7.png')]
     i = 0
     death_frames_images = [0, 0, 0, 0, 0, 0, 0]
     for pics in death_frames_pics:
@@ -432,8 +472,6 @@ def ship_hit(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bu
     # Pause.
     sleep(0.5)
 
-def display_high_scores(ai_settings, screen, sb, high_scores):
-    high_scores.display(sb.rounded_score)
 
 def check_aliens_bottom(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, barriers):
     """Check if any aliens have reached the bottom of the screen."""
@@ -444,6 +482,7 @@ def check_aliens_bottom(ai_settings, screen, stats, sb, high_scores, ship, alien
             # Treat this the same as if the ship got hit.
             ship_hit(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, barriers)
             break
+
 
 def update_aliens(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, alien_lasers, barriers):
     """
@@ -468,6 +507,7 @@ def update_aliens(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFO
     # Look for aliens hitting the bottom of the screen.
     check_aliens_bottom(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, barriers)
 
+
 def create_alien(ai_settings, screen, aliens, alien_number, row_number, type):
     """Create an alien, and place it in the row."""
     alien = Aliens(ai_settings, screen, alien_number, row_number, type)
@@ -476,7 +516,8 @@ def create_alien(ai_settings, screen, aliens, alien_number, row_number, type):
     alien.rect.x = alien.x
     alien.rect.y = alien.rect.height + 2 * alien.rect.height * row_number
     aliens.add(alien)
-    
+
+
 def create_fleet(ai_settings, screen, ship, aliens, UFOs, bullets, barriers):
     """Create a full fleet of aliens, and reset various features."""
     # Reset times.
@@ -517,6 +558,7 @@ def create_fleet(ai_settings, screen, ship, aliens, UFOs, bullets, barriers):
         for bar in range(1, number_barriers):
             create_barrier(ai_settings, screen, bar, bunker_num, barriers)
 
+
 def reset_fleet(ai_settings, aliens, UFOs, bullets):
     # Reset times.
     curtime = pygame.time.get_ticks()
@@ -538,6 +580,7 @@ def reset_fleet(ai_settings, aliens, UFOs, bullets):
         alien.x = 232 + 2 * alien.rect.width * alien.alien_number
         alien.rect.x = alien.x
         alien.rect.y = alien.rect.height + 2 * alien.rect.height * alien.row_number
+
 
 def create_barrier(ai_settings, screen, bar, bunker_num, barriers):
     # Find new barrier's position
@@ -569,6 +612,7 @@ def create_barrier(ai_settings, screen, bar, bunker_num, barriers):
         barrier = Barrier(ai_settings, screen, x + (ai_settings.bar_width * 3), y - (ai_settings.bar_height * 2), 'BL')
     barriers.add(barrier)
 
+
 class Ship_Destroy_Animation:
     def __init__(self, frames, wait = 100, frameindex = 0, step = 1, looponce = True):
         self.frames = frames
@@ -579,6 +623,7 @@ class Ship_Destroy_Animation:
         self.finished = False
         self.lastframe = len(frames) - 1 if step == 1 else 0
         self.last = None
+
     def frame_index(self):
         now = pygame.time.get_ticks()
         if self.last is None:
@@ -593,9 +638,12 @@ class Ship_Destroy_Animation:
                 self.frameindex %= len(self.frames)
             self.last = now
         return self.frameindex
+
     def reset(self):
         self.last = None
         self.finished = False
+
     def __str__(self): return 'Timer(frames=' + self.frames + ', wait=' + str(self.wait) + ', index=' + str(self.frameindex) + ')'
+
     def imagerect(self):
         return self.frames[self.frame_index()]

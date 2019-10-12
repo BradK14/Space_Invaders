@@ -8,6 +8,7 @@ from button import Button
 from ship import Ship
 import game_functions as gf
 
+
 def run_game():
     # Initialize pygame, settings, and screen object.
     pygame.init()
@@ -18,13 +19,14 @@ def run_game():
     # Make the Buttons.
     play_button = Button(ai_settings, screen, "Play")
     high_score_button = Button(ai_settings, screen, "High Scores")
+    done_button = Button(ai_settings, screen, "Done")
 
     # Create an instance to store game statistics, and a scoreboard.
     stats = GameStats(ai_settings)
     sb = Scoreboard(ai_settings, screen, stats)
     high_scores = High_Scores(ai_settings, screen)
 
-    # Make a ship, a group of bullets, and a group of aliens.
+    # Make a ship and group of each type of sprite.
     ship = Ship(ai_settings, screen)
     bullets = Group()
     alien_lasers = Group()
@@ -37,14 +39,15 @@ def run_game():
 
     # Start the main loop for the game.
     while True:
-        gf.check_events(ai_settings, screen, stats, sb, play_button, high_score_button, ship, aliens, UFOs, bullets, alien_lasers, barriers)
+        gf.check_events(ai_settings, screen, stats, sb, play_button, high_score_button, done_button, ship, aliens, UFOs, bullets, alien_lasers, barriers)
         if stats.game_active:
             ship.update()
             gf.update_bullets(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, alien_lasers, barriers)
             gf.update_aliens(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, alien_lasers, barriers)
             gf.update_UFOs(ai_settings, screen, UFOs)
-            gf.update_music(ai_settings)
-            gf.update_animations(ai_settings, screen)
-        gf.update_screen(ai_settings, screen, stats, sb, ship, aliens, UFOs, bullets, alien_lasers, play_button,high_score_button, barriers)
+            gf.update_music(ai_settings, UFOs)
+            gf.update_animations(ai_settings)
+        gf.update_screen(ai_settings, screen, stats, sb, high_scores, ship, aliens, UFOs, bullets, alien_lasers, play_button, high_score_button, done_button, barriers)
+
 
 run_game()

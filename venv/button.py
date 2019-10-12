@@ -1,6 +1,7 @@
 import pygame.font
 
-class Button():
+
+class Button:
     def __init__(self, ai_settings, screen, msg):
         """Initialize button attributes."""
         self.screen = screen
@@ -17,6 +18,9 @@ class Button():
         if msg is "Play":
             self.rect.center = self.screen_rect.center
             self.rect.y += 200
+        elif msg is "High Scores":
+            self.rect.center = self.screen_rect.center
+            self.rect.y += 280
         else:
             self.rect.center = self.screen_rect.center
             self.rect.y += 280

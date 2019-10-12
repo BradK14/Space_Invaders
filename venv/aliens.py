@@ -1,6 +1,7 @@
 import pygame
 from pygame.sprite import Sprite
 
+
 class Aliens(Sprite):
     """A class to represent a single alien in the fleet."""
     def __init__(self, ai_settings, screen, alien_number, row_number, type):
@@ -67,7 +68,7 @@ class Aliens(Sprite):
         else:
             self.image = self.default_image
             self.step = 1
-        return (self.ai_settings.alien_speed_factor * self.ai_settings.fleet_direction)
+        return self.ai_settings.alien_speed_factor * self.ai_settings.fleet_direction
 
     def blitme(self):
         """Draw the alien at its current location."""

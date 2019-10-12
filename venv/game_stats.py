@@ -8,6 +8,9 @@ class GameStats():
         # Start game in an inactive state.
         self.game_active = False
 
+        # Determine whether to show the high score screen or the startup screen
+        self.high_score_screen = False
+
         # High score should never be reset.
         self.high_score = 0
 
